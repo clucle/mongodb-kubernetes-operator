@@ -1,73 +1,111 @@
-# MongoDB Community Kubernetes Operator #
+## Ref
+[link](https://1week.tistory.com/101)
 
-<img align="right" src="https://mongodb-kubernetes-operator.s3.amazonaws.com/img/Leaf-Forest%402x.png">
+## Easy Access
 
-This is a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) which deploys MongoDB Community into Kubernetes clusters.
+```
+git clone https://github.com/clucle/mongodb-kubernetes-operator.git
+cd mongodb-kubernetes-operator
 
-If you are a MongoDB Enterprise customer, or need Enterprise features such as Backup, you can use the [MongoDB Enterprise Operator for Kubernetes](https://github.com/mongodb/mongodb-enterprise-kubernetes).
+kubectl apply -f config/crd/bases/mongodbcommunity.mongodb.com_mongodbcommunity.yaml
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl apply -f config/crd/bases/mongodbcommunity.mongodb.com_mongodbcommunity.yaml
+# customresourcedefinition.apiextensions.k8s.io/mongodbcommunity.mongodbcommunity.mongodb.com configured
 
-Here is a talk from MongoDB Live 2020 about the Community Operator:
-* [Run it in Kubernetes! Community and Enterprise MongoDB in Containers](https://www.youtube.com/watch?v=2Xszdg-4T6A&t=1368s)
+kubectl get crd/mongodbcommunity.mongodbcommunity.mongodb.com
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl get crd/mongodbcommunity.mongodbcommunity.mongodb.com
+# NAME                                            CREATED AT
+# mongodbcommunity.mongodbcommunity.mongodb.com   2023-07-25T06:49:19Z
 
-> **Note** 
-> 
-> Hi, I'm Dan Mckean 👋 I'm the Product Manager for MongoDB's support of Kubernetes. 
-> 
-> The [Community Operator](https://github.com/mongodb/mongodb-kubernetes-operator) is something I inherited when I started, but it doesn't get as much attention from us as we'd like, and we're trying to understand how it's used in order to establish it's future. It will help us establish exactly what level of support we can offer, and what sort of timeframe we aim to provide support in 🙂 
->
->Here's a super short survey (it's much easier for us to review all the feedback that way!): [https://docs.google.com/forms/d/e/1FAIpQLSfwrwyxBSlUyJ6AmC-eYlgW_3JEdfA48SB2i5--_WpiynMW2w/viewform?usp=sf_link](https://docs.google.com/forms/d/e/1FAIpQLSfwrwyxBSlUyJ6AmC-eYlgW_3JEdfA48SB2i5--_WpiynMW2w/viewform?usp=sf_link)
->
-> If you'd rather email me instead: [dan.mckean@mongodb.com](mailto:dan.mckean@mongodb.com?subject=MongoDB%20Community%20Operator%20feedback)
+kubectl create ns mongodb-operator
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl create ns mongodb-operator
+# namespace/mongodb-operator created
 
-## Table of Contents
+kubectl apply -k config/rbac/ -n mongodb-operator
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl apply -k config/rbac/ -n mongodb-operator
+# serviceaccount/mongodb-database created
+# serviceaccount/mongodb-kubernetes-operator created
+# role.rbac.authorization.k8s.io/mongodb-database created
+# role.rbac.authorization.k8s.io/mongodb-kubernetes-operator created
+# rolebinding.rbac.authorization.k8s.io/mongodb-database created
+# rolebinding.rbac.authorization.k8s.io/mongodb-kubernetes-operator created
 
-- [Documentation](#documentation)
-- [Supported Features](#supported-features)
-  - [Planned Features](#planned-features)
-- [Contribute](#contribute)
-- [License](#license)
+kubectl apply -f deploy/clusterwide
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl apply -f deploy/clusterwide
+# clusterrole.rbac.authorization.k8s.io/mongodb-kubernetes-operator created
+# clusterrolebinding.rbac.authorization.k8s.io/mongodb-kubernetes-operator created
+# clusterrole.rbac.authorization.k8s.io/read-access-for-service-binding created
 
-## Documentation
+kubectl apply -f config/manager/manager.yaml -n mongodb-operator
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl apply -f config/manager/manager.yaml -n mongodb-operator
+# deployment.apps/mongodb-kubernetes-operator created
 
-See the [documentation](/docs) to learn how to:
+kubectl create namespace mongodb-test
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl create namespace mongodb-test
+# namespace/mongodb-test created
 
-1. [Install or upgrade](/docs/install-upgrade.md) the Operator.
-1. [Deploy and configure](/docs/deploy-configure.md) MongoDB resources.
-1. [Create a database user](/docs/users.md) with SCRAM authentication.
-1. [Secure MongoDB resource connections](/docs/secure.md) using TLS.
+kubectl apply -k config/rbac -n mongodb-test
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl apply -k config/rbac -n mongodb-test
+# serviceaccount/mongodb-database created
+# serviceaccount/mongodb-kubernetes-operator created
+# role.rbac.authorization.k8s.io/mongodb-database created
+# role.rbac.authorization.k8s.io/mongodb-kubernetes-operator created
+# rolebinding.rbac.authorization.k8s.io/mongodb-database created    
+# rolebinding.rbac.authorization.k8s.io/mongodb-kubernetes-operator created
 
-*NOTE: [MongoDB Enterprise Kubernetes Operator](https://www.mongodb.com/docs/kubernetes-operator/master/) docs are for the enterprise operator use case and NOT for the community operator. In addition to the docs mentioned above, you can refer to this [blog post](https://www.mongodb.com/blog/post/run-secure-containerized-mongodb-deployments-using-the-mongo-db-community-kubernetes-oper) as well to learn more about community operator deployment*
+kubectl apply -f sample/mongodb.yaml -n mongodb-test
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ kubectl apply -f sample/mongodb.yaml -n mongodb-test
+# mongodbcommunity.mongodbcommunity.mongodb.com/example-mongodb created
+# secret/user1-password created
+```
 
-## Supported Features
+Pending 상태가 오래 지속되다가 Running 으로 변경됨
+상태 확인 (pod 3개가 정상적으로 Running)
+```
+k get all -n mongodb-test
+# clucle@APSEO-D-1LS87X3:/mnt/d/repo/mongodb-kubernetes-operator$ k get all -n mongodb-test
+# NAME                    READY   STATUS    RESTARTS   AGE
+# pod/example-mongodb-0   2/2     Running   0          28m
+# pod/example-mongodb-1   2/2     Running   0          27m
+# pod/example-mongodb-2   2/2     Running   0          26m
+# 
+# NAME                          TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)     AGE
+# service/example-mongodb-svc   ClusterIP   None         <none>        27017/TCP   28m
+# 
+# NAME                                   READY   AGE
+# statefulset.apps/example-mongodb-arb   0/0     28m
+# statefulset.apps/example-mongodb       3/3     28m
+```
 
-The MongoDB Community Kubernetes Operator supports the following features:
 
-- Create [replica sets](https://www.mongodb.com/docs/manual/replication/)
-- Upgrade and downgrade MongoDB server version
-- Scale replica sets up and down
-- Read from and write to the replica set while scaling, upgrading, and downgrading. These operations are done in an "always up" manner.
-- Report MongoDB server state via the [MongoDBCommunity resource](/config/crd/bases/mongodbcommunity.mongodb.com_mongodbcommunity.yaml) `status` field
-- Use any of the available [Docker MongoDB images](https://hub.docker.com/_/mongo/)
-- Connect to the replica set from inside the Kubernetes cluster (no external connectivity)
-- Secure client-to-server and server-to-server connections with TLS
-- Create users with [SCRAM](https://www.mongodb.com/docs/manual/core/security-scram/) authentication
-- Create custom roles
-- Enable a [metrics target that can be used with Prometheus](docs/prometheus/README.md)
+접속 테스트
+```
+k exec -n mongodb-test example-mongodb-0 -it bash
+mongosh "mongodb+srv://user1:somepassword@example-mongodb-svc.mongodb-test.svc.cluster.local/admin?ssl=false"
+```
 
-### Planned Features
-- Server internal authentication via keyfile
+외부 포트 열기
+```
+kubectl port-forward -n mongodb-test svc/example-mongodb-svc 27017:27017
+```
 
-## Contribute
+name 으로 ip 찾기 위해 host 에 등록
+linux : /etc/hosts
+window : C:\Windows\System32\drivers\etc\hosts
+```
+127.0.0.1   example-mongodb-0.example-mongodb-svc.mongodb-test.svc.cluster.local
+127.0.0.1   example-mongodb-1.example-mongodb-svc.mongodb-test.svc.cluster.local
+127.0.0.1   example-mongodb-2.example-mongodb-svc.mongodb-test.svc.cluster.local
+```
 
-Before you contribute to the MongoDB Community Kubernetes Operator, please read:
+테스트 계정
+- name : user1
+- password : somepassword
 
-- [MongoDB Community Kubernetes Operator Architecture](/docs/architecture.md)
-- [Contributing to MongoDB Community Kubernetes Operator](/docs/contributing.md)
+권한 수정이 필요하다면 sample/mongodb.yaml 의 role 을 설정하고 다시 실행합니다.
+기본적 상태에서는 admin, test db 에만 권한을 부여했습니다
 
-Please file issues before filing PRs. For PRs to be accepted, contributors must sign our [CLA](https://www.mongodb.com/legal/contributor-agreement).
-
-Reviewers, please ensure that the CLA has been signed by referring to [the contributors tool](https://contributors.corp.mongodb.com/) (internal link).
-
-## License
-
-Please see the [LICENSE](LICENSE.md) file.
+```
+vi sample/mogodb.yaml # 수정..
+kubectl delete -f sample/mongodb.yaml -n mongodb-test
+kubectl apply -f sample/mongodb.yaml -n mongodb-test
+```
